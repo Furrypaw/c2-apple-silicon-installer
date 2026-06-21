@@ -6,6 +6,39 @@ Download the latest release ZIP, unzip it, then double-click:
 
 Do not download only the `.command` file from the source browser. The installer also needs the `tools/` folder that is included in the release ZIP.
 
+## macOS Malware Warning
+
+If macOS says:
+
+`Apple could not verify "Install Cultris II for Apple Silicon.command" is free of malware that may harm your Mac or compromise your privacy.`
+
+Use one of these options.
+
+### Option 1: Right-click Open
+
+1. Open the unzipped `c2-apple-silicon-installer` folder.
+2. Hold `Control` and click `Install Cultris II for Apple Silicon.command`.
+3. Choose `Open`.
+4. Click `Open` again if macOS asks for confirmation.
+
+### Option 2: System Settings
+
+1. Try opening `Install Cultris II for Apple Silicon.command` once.
+2. Open `System Settings`.
+3. Go to `Privacy & Security`.
+4. Scroll down and click `Open Anyway` for the blocked installer.
+5. Try opening the installer again.
+
+### Option 3: Terminal
+
+Use this only for the ZIP downloaded from this repository's release page:
+
+```bash
+xattr -dr com.apple.quarantine ~/Downloads/c2-apple-silicon-installer
+```
+
+If you unzipped it somewhere else, replace the path with that folder's path. Then double-click `Install Cultris II for Apple Silicon.command` again.
+
 The installer creates a `C2` folder on your Desktop with:
 
 - `Play Cultris II.command`
