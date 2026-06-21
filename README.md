@@ -103,4 +103,12 @@ Restart the game after changing the file.
 
 ## Audio
 
-The old native BASS audio library is disabled on Apple Silicon because the bundled BASS binary is not arm64. The game should run natively without Rosetta or VM emulation, but it will be silent unless a future arm64-compatible audio patch is added.
+The old native BASS audio library is disabled on Apple Silicon because the bundled BASS binaries are not arm64. Short game sound effects are restored through Java's native arm64 audio path, so they work without Rosetta or VM emulation.
+
+Music is still disabled for now because Cultris II uses MO3 tracker files that were previously decoded by BASS. Keeping that path disabled avoids loading x86 native audio code.
+
+Sound effects can be enabled or disabled in:
+
+`Desktop/C2/c2-patch/settings/UE-oggfiles.txt`
+
+Lines that start with `disabled_` are skipped. Remove that prefix to re-enable a sound effect.

@@ -1,7 +1,13 @@
-import java.nio.file.*;
-import org.objectweb.asm.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
 
-public class PatchDisableBassAudio {
+public class PatchJavaAudioEffects {
     public static void main(String[] args) throws Exception {
         Path in = Paths.get(args[0]);
         Path out = Paths.get(args[1]);
@@ -17,16 +23,22 @@ public class PatchDisableBassAudio {
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
                 MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
                 if (name.equals("try") && desc.equals("()V")) {
-                    emitInitNoop(mv);
+                    emitInit(mv);
+                    return null;
+                }
+                if (name.equals("method422") && desc.equals("(Lzg_1112;F)V")) {
+                    emitPlay(mv);
+                    return null;
+                }
+                if (name.equals("method56") && desc.equals("()V")) {
+                    emitShutdown(mv);
                     return null;
                 }
                 if ((name.equals("method14") && desc.equals("(I)V"))
                         || (name.equals("method89") && desc.equals("()V"))
                         || (name.equals("method61") && desc.equals("()V"))
-                        || (name.equals("method422") && desc.equals("(Lzg_1112;F)V"))
                         || (name.equals("method423") && desc.equals("(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"))
                         || (name.equals("method424") && desc.equals("(Lzg_1112;Ljava/lang/String;LVf_301;F)V"))
-                        || (name.equals("method56") && desc.equals("()V"))
                         || (name.equals("readoggfileslist") && desc.equals("()V"))) {
                     emitReturn(mv);
                     return null;
@@ -49,11 +61,8 @@ public class PatchDisableBassAudio {
                 return mv;
             }
 
-            private void emitInitNoop(MethodVisitor mv) {
+            private void emitInit(MethodVisitor mv) {
                 mv.visitCode();
-                mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "out", "Ljava/io/PrintStream;");
-                mv.visitLdcInsn("[C2 patch] Native BASS audio disabled on Apple Silicon");
-                mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
                 mv.visitInsn(Opcodes.ICONST_0);
                 mv.visitFieldInsn(Opcodes.PUTSTATIC, "UE_281", "field792", "Z");
                 mv.visitInsn(Opcodes.ICONST_M1);
@@ -62,6 +71,25 @@ public class PatchDisableBassAudio {
                 mv.visitFieldInsn(Opcodes.PUTSTATIC, "UE_281", "field783", "I");
                 mv.visitMethodInsn(Opcodes.INVOKESTATIC, "JB_129", "method829", "()F", false);
                 mv.visitFieldInsn(Opcodes.PUTSTATIC, "UE_281", "field789", "F");
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2JavaAudioEffects", "init", "()V", false);
+                mv.visitInsn(Opcodes.RETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            private void emitPlay(MethodVisitor mv) {
+                mv.visitCode();
+                mv.visitVarInsn(Opcodes.ALOAD, 0);
+                mv.visitVarInsn(Opcodes.FLOAD, 1);
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2JavaAudioEffects", "play", "(Ljava/lang/Object;F)V", false);
+                mv.visitInsn(Opcodes.RETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            private void emitShutdown(MethodVisitor mv) {
+                mv.visitCode();
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2JavaAudioEffects", "shutdown", "()V", false);
                 mv.visitInsn(Opcodes.RETURN);
                 mv.visitMaxs(0, 0);
                 mv.visitEnd();

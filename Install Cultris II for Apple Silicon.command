@@ -167,7 +167,7 @@ PATCHER_CP="$PATCHER_CLASSES:$CACHE_DIR/asm-9.7.1.jar:$CACHE_DIR/asm-commons-9.7
 "$JAVAC_BIN" -source 1.8 -target 1.8 \
   -cp "$CACHE_DIR/asm-9.7.1.jar:$CACHE_DIR/asm-commons-9.7.1.jar" \
   -d "$PATCHER_CLASSES" \
-  "$SCRIPT_DIR/tools/src/PatchDisableBassAudio.java" \
+  "$SCRIPT_DIR/tools/src/PatchJavaAudioEffects.java" \
   "$SCRIPT_DIR/tools/src/PatchClassVersion52.java" \
   "$SCRIPT_DIR/tools/src/PatchDisplayForceWindowed.java" \
   "$SCRIPT_DIR/tools/src/PatchLWJGLArmSupport.java" \
@@ -184,7 +184,7 @@ extract_class "org/lwjgl/input/K_701"
 extract_class "org/lwjgl/opengl/Display"
 extract_class "zy_1113"
 
-patch_class PatchDisableBassAudio "UE_281"
+patch_class PatchJavaAudioEffects "UE_281"
 patch_class PatchLWJGLArmSupport "org/lwjgl/E_681"
 patch_class PatchLWJGLArmSupport "org/lwjgl/Sys"
 patch_class PatchLWJGLArmSupport "org/lwjgl/input/K_701"
@@ -217,7 +217,8 @@ printf '%s\n' "$SCRIPT_DIR/tools/src/java8stubs/zy_1113.java" >> "$WORK_DIR/help
 patch_class PatchClassVersion52 "zy_1113"
 
 "$JAVAC_BIN" -source 1.8 -target 1.8 -d "$PATCHED_CLASSES" \
-  "$SCRIPT_DIR/tools/src/ReadBackgroundColor.java"
+  "$SCRIPT_DIR/tools/src/ReadBackgroundColor.java" \
+  "$SCRIPT_DIR/tools/src/C2JavaAudioEffects.java"
 
 "$JAR_BIN" uf "$GAME_DIR/cultris2.jar" -C "$PATCHED_CLASSES" .
 zip -dq "$GAME_DIR/cultris2.jar" \
