@@ -43,6 +43,7 @@ The installer creates a `C2` folder on your Desktop with:
 
 - `Play Cultris II.command`
 - `C2 Settings.command`
+- `Update Cultris II.command`
 - the original c2-patch download
 - Apple Silicon Java 8
 - Apple Silicon LWJGL native libraries
@@ -70,6 +71,20 @@ You can override the full ZIP mirror if needed:
 
 ```bash
 C2_PATCH_BACKUP_URL="https://example.com/c2-patch-stable.zip" ./Install\ Cultris\ II\ for\ Apple\ Silicon.command
+```
+
+## Updating
+
+After installing, double-click:
+
+`Desktop/C2/Update Cultris II.command`
+
+The updater checks the latest `stable` branch commit on `shayklos/c2-patch` and compares it with the commit recorded in your local install. If upstream changed, it downloads the new c2-patch ZIP, keeps your local `settings/` files and replay files, reapplies the Apple Silicon patches, and moves the previous install to a timestamped backup folder.
+
+If you want to update even when the recorded commit matches:
+
+```bash
+C2_FORCE_UPDATE=1 ~/Desktop/C2/Update\ Cultris\ II.command
 ```
 
 ## Background Color
