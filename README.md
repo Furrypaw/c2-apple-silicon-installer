@@ -25,13 +25,19 @@ By default:
 
 `https://github.com/shayklos/c2-patch/archive/refs/heads/stable.zip`
 
-If that upstream URL disappears and you have a permitted/private mirror of the same ZIP, you can run:
+If that upstream URL disappears, the installer automatically falls back to this mirror:
+
+`https://data.catgc.com/c2-patch-stable%20%2821.06.26%29.zip`
+
+There is also a direct mirrored jar here for emergency/manual recovery:
+
+`https://data.catgc.com/cultris2.jar`
+
+You can override the full ZIP mirror if needed:
 
 ```bash
 C2_PATCH_BACKUP_URL="https://example.com/c2-patch-stable.zip" ./Install\ Cultris\ II\ for\ Apple\ Silicon.command
 ```
-
-This repository intentionally does not publicly mirror `cultris2.jar` or the full c2-patch ZIP because the game binary does not appear to have a clear redistribution license.
 
 ## Background Color
 
