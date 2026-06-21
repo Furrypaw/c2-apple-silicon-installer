@@ -6,12 +6,13 @@ INSTALL_ROOT="${C2_INSTALL_ROOT:-$HOME/Desktop/C2}"
 CACHE_DIR="$SCRIPT_DIR/.cache"
 WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/c2-arm-install.XXXXXX")"
 
-C2_PATCH_URL="https://github.com/shayklos/c2-patch/archive/refs/heads/stable.zip"
-ZULU_JDK_URL="https://cdn.azul.com/zulu/bin/zulu8.94.0.17-ca-jdk8.0.492-macosx_aarch64.zip"
-ASM_URL="https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar"
-ASM_COMMONS_URL="https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.7.1/asm-commons-9.7.1.jar"
-LWJGL_JAR_URL="https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-2.9.3-macos-aarch64.jar"
-LWJGL_PLATFORM_URL="https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-platform-2.9.3-macos-aarch64.jar"
+C2_PATCH_URL="${C2_PATCH_URL:-https://github.com/shayklos/c2-patch/archive/refs/heads/stable.zip}"
+C2_PATCH_BACKUP_URL="${C2_PATCH_BACKUP_URL:-}"
+ZULU_JDK_URL="${ZULU_JDK_URL:-https://cdn.azul.com/zulu/bin/zulu8.94.0.17-ca-jdk8.0.492-macosx_aarch64.zip}"
+ASM_URL="${ASM_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar}"
+ASM_COMMONS_URL="${ASM_COMMONS_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.7.1/asm-commons-9.7.1.jar}"
+LWJGL_JAR_URL="${LWJGL_JAR_URL:-https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-2.9.3-macos-aarch64.jar}"
+LWJGL_PLATFORM_URL="${LWJGL_PLATFORM_URL:-https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-platform-2.9.3-macos-aarch64.jar}"
 
 cleanup() {
   rm -rf "$WORK_DIR"
@@ -75,7 +76,16 @@ fi
 mkdir -p "$CACHE_DIR"
 
 say "Step 1/6: downloading the game patch, Java, and Apple Silicon graphics libraries."
-download "$C2_PATCH_URL" "$CACHE_DIR/c2-patch-stable.zip"
+if ! download "$C2_PATCH_URL" "$CACHE_DIR/c2-patch-stable.zip"; then
+  if [ -n "$C2_PATCH_BACKUP_URL" ]; then
+    echo "Primary c2-patch download failed. Trying backup URL."
+    download "$C2_PATCH_BACKUP_URL" "$CACHE_DIR/c2-patch-stable.zip"
+  else
+    echo "Primary c2-patch download failed and no C2_PATCH_BACKUP_URL is set."
+    pause_if_tty
+    exit 1
+  fi
+fi
 download "$ZULU_JDK_URL" "$CACHE_DIR/zulu8-arm64-jdk.zip"
 download "$ASM_URL" "$CACHE_DIR/asm-9.7.1.jar"
 download "$ASM_COMMONS_URL" "$CACHE_DIR/asm-commons-9.7.1.jar"
