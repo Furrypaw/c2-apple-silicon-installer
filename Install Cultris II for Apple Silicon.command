@@ -256,13 +256,13 @@ fi
     "$GAME_DIR/src/backend/DisplayModeHelper.java" \
     "$GAME_DIR/src/backend/readanimtoggle.java" \
     "$GAME_DIR/src/backend/rugguUtils.java" \
-    "$GAME_DIR/src/frontend/ColorPicker.java" \
-    "$GAME_DIR/src/frontend/c2settings.java"; do
+    "$GAME_DIR/src/frontend/ColorPicker.java"; do
     if [ -f "$source_file" ]; then
       printf '%s\n' "$source_file"
     fi
   done
 } > "$WORK_DIR/helper-sources.txt"
+printf '%s\n' "$SCRIPT_DIR/tools/src/C2SettingsAppleSilicon.java" >> "$WORK_DIR/helper-sources.txt"
 find "$SCRIPT_DIR/tools/src/java8compat" -name '*.java' -print >> "$WORK_DIR/helper-sources.txt"
 printf '%s\n' "$SCRIPT_DIR/tools/src/java8stubs/zy_1113.java" >> "$WORK_DIR/helper-sources.txt"
 

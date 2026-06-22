@@ -51,6 +51,8 @@ The installer creates a `C2` folder on your Desktop with:
 
 It does not include the Cultris II game jar or Java runtime in this repository. Those are downloaded during install.
 
+Use `C2 Settings.command` to change common options without editing text files, including music on/off, sound effects, FPS/Hz caps, blur, and the game background color.
+
 ## Where the Game Comes From
 
 The installer downloads the original `shayklos/c2-patch` stable ZIP, extracts `cultris2.jar`, then patches that jar locally on your Mac for Apple Silicon.
@@ -101,6 +103,8 @@ Use normal RGB values:
 
 Restart the game after changing the file.
 
+You can also change this from `Desktop/C2/C2 Settings.command` in the `Display` tab.
+
 ## Audio
 
 Short game sound effects are restored through Java's native arm64 audio path, so they work without Rosetta or VM emulation.
@@ -118,6 +122,8 @@ Music can be disabled in:
 `Desktop/C2/c2-patch/settings/music-enabled.txt`
 
 Use `1` to enable music or `0` to disable it. Restart the game after changing this file.
+
+You can also change this from `Desktop/C2/C2 Settings.command` in the `Audio` tab.
 
 Sound effects can be enabled or disabled in:
 

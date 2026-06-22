@@ -372,13 +372,13 @@ fi
     "$NEW_GAME_DIR/src/backend/DisplayModeHelper.java" \
     "$NEW_GAME_DIR/src/backend/readanimtoggle.java" \
     "$NEW_GAME_DIR/src/backend/rugguUtils.java" \
-    "$NEW_GAME_DIR/src/frontend/ColorPicker.java" \
-    "$NEW_GAME_DIR/src/frontend/c2settings.java"; do
+    "$NEW_GAME_DIR/src/frontend/ColorPicker.java"; do
     if [ -f "$source_file" ]; then
       printf '%s\n' "$source_file"
     fi
   done
 } > "$WORK_DIR/helper-sources.txt"
+printf '%s\n' "$TOOLS_DIR/src/C2SettingsAppleSilicon.java" >> "$WORK_DIR/helper-sources.txt"
 find "$TOOLS_DIR/src/java8compat" -name '*.java' -print >> "$WORK_DIR/helper-sources.txt"
 printf '%s\n' "$TOOLS_DIR/src/java8stubs/zy_1113.java" >> "$WORK_DIR/helper-sources.txt"
 
