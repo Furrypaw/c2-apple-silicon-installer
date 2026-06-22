@@ -91,25 +91,9 @@ If you want to update even when the recorded commit matches:
 C2_FORCE_UPDATE=1 ~/Desktop/C2/Update\ Cultris\ II.command
 ```
 
-## Background Color
-
-After installing, edit:
-
-`Desktop/C2/c2-patch/settings/background-color.txt`
-
-Use normal RGB values:
-
-```text
-47, 47, 47
-```
-
-Restart the game after changing the file.
-
-You can also change this from `Desktop/C2/C2 Settings.command` in the `Display` tab.
-
 ## Audio
 
-Short game sound effects are restored through Java's native arm64 audio path, so they work without Rosetta or VM emulation.
+Short game sound effects work through Java's native arm64 audio path, so they do not require Rosetta or VM emulation.
 
 Music uses Cultris II's original MO3 tracker files through an arm64-native BASS bridge. The installer downloads the official macOS BASS package from Un4seen, extracts the arm64 `libbass.dylib`, and builds a tiny JNI bridge locally.
 
@@ -118,17 +102,3 @@ BASS is downloaded from:
 `https://www.un4seen.com/files/bass24-osx.zip`
 
 Un4seen says BASS is free for non-commercial use. Commercial usage may require a BASS license.
-
-Music can be disabled in:
-
-`Desktop/C2/c2-patch/settings/music-enabled.txt`
-
-Use `1` to enable music or `0` to disable it. Restart the game after changing this file.
-
-You can also change this from `Desktop/C2/C2 Settings.command` in the `Audio` tab.
-
-Sound effects can be enabled or disabled in:
-
-`Desktop/C2/c2-patch/settings/UE-oggfiles.txt`
-
-Lines that start with `disabled_` are skipped. Remove that prefix to re-enable a sound effect.
