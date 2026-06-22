@@ -51,7 +51,7 @@ The installer creates a `C2` folder on your Desktop with:
 
 It does not include the Cultris II game jar or Java runtime in this repository. Those are downloaded during install.
 
-Use `C2 Settings.command` to change common options without editing text files, including music on/off, sound effects, FPS/Hz caps, blur, and the game background color.
+Use `C2 Settings.command` to change common options without editing text files.
 
 ## Where the Game Comes From
 
