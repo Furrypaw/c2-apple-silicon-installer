@@ -34,12 +34,23 @@ pause_if_tty() {
 download() {
   local url="$1"
   local out="$2"
+  local tmp="$out.partial"
+  local size
   if [ -s "$out" ]; then
     printf 'Using cached %s\n' "$(basename "$out")"
     return
   fi
-  printf 'Downloading %s\n' "$(basename "$out")"
-  curl --fail --location --progress-bar "$url" -o "$out"
+  printf 'Downloading %s ... ' "$(basename "$out")"
+  rm -f "$tmp"
+  if curl --fail --location --silent --show-error "$url" -o "$tmp"; then
+    mv "$tmp" "$out"
+    size="$(du -h "$out" | awk '{print $1}')"
+    printf 'done (%s)\n' "$size"
+  else
+    rm -f "$tmp"
+    printf 'failed\n'
+    return 1
+  fi
 }
 
 latest_upstream_sha() {

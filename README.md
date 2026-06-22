@@ -105,7 +105,7 @@ Restart the game after changing the file.
 
 The old native BASS audio library is disabled on Apple Silicon because the bundled BASS binaries are not arm64. Short game sound effects are restored through Java's native arm64 audio path, so they work without Rosetta or VM emulation.
 
-Music is still disabled for now because Cultris II uses MO3 tracker files that were previously decoded by BASS. Keeping that path disabled avoids loading x86 native audio code.
+Music is still disabled for now because Cultris II uses MO3 tracker files that were previously decoded by BASS. Keeping that path disabled avoids loading x86 native audio code. This is not controlled by the sound-effects settings file.
 
 Sound effects can be enabled or disabled in:
 
