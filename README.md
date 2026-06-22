@@ -83,6 +83,8 @@ After installing, double-click:
 
 The updater checks the latest `stable` branch commit on `shayklos/c2-patch` and compares it with the commit recorded in your local install. If upstream changed, it downloads the new c2-patch ZIP, keeps your local `settings/` files and replay files, reapplies the Apple Silicon patches, and moves the previous install to a timestamped backup folder.
 
+The updater also checks the latest release of this Apple Silicon installer repo. If newer patch tools or scripts are available here, it downloads that release ZIP, uses the newer tools for the rebuild, and refreshes `Desktop/C2/Update Cultris II.command` plus the hidden support files. This is how fixes like new settings UI controls can reach an existing install even when upstream `c2-patch` did not change.
+
 If you want to update even when the recorded commit matches:
 
 ```bash

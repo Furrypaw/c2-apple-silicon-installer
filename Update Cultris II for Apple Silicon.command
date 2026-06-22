@@ -19,6 +19,8 @@ WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/c2-arm-update.XXXXXX")"
 C2_PATCH_URL="${C2_PATCH_URL:-https://github.com/shayklos/c2-patch/archive/refs/heads/stable.zip}"
 C2_PATCH_BRANCH_API_URL="${C2_PATCH_BRANCH_API_URL:-https://api.github.com/repos/shayklos/c2-patch/branches/stable}"
 C2_PATCH_BACKUP_URL="${C2_PATCH_BACKUP_URL:-https://data.catgc.com/c2-patch-stable%20%2821.06.26%29.zip}"
+INSTALLER_VERSION="v1.3.2"
+INSTALLER_RELEASE_API_URL="${INSTALLER_RELEASE_API_URL:-https://api.github.com/repos/Furrypaw/c2-apple-silicon-installer/releases/latest}"
 ZULU_JDK_URL="${ZULU_JDK_URL:-https://cdn.azul.com/zulu/bin/zulu8.94.0.17-ca-jdk8.0.492-macosx_aarch64.zip}"
 ASM_URL="${ASM_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar}"
 ASM_COMMONS_URL="${ASM_COMMONS_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.7.1/asm-commons-9.7.1.jar}"
@@ -69,10 +71,90 @@ latest_upstream_sha() {
     | head -n 1
 }
 
+version_code() {
+  local v="${1#v}"
+  local major minor patch
+  v="${v%%-*}"
+  IFS=. read -r major minor patch <<EOF
+$v
+EOF
+  major="${major:-0}"
+  minor="${minor:-0}"
+  patch="${patch:-0}"
+  case "$major" in ''|*[!0-9]*) major=0 ;; esac
+  case "$minor" in ''|*[!0-9]*) minor=0 ;; esac
+  case "$patch" in ''|*[!0-9]*) patch=0 ;; esac
+  printf '%d%03d%03d\n' "$major" "$minor" "$patch"
+}
+
+version_gt() {
+  [ "$(version_code "$1")" -gt "$(version_code "$2")" ]
+}
+
+read_installer_version() {
+  if [ -f "$SUPPORT_DIR/version" ]; then
+    tr -d '[:space:]' < "$SUPPORT_DIR/version"
+  else
+    printf '%s\n' "$INSTALLER_VERSION"
+  fi
+}
+
+latest_installer_release() {
+  local metadata="$WORK_DIR/installer-release.json"
+  curl --fail --location --silent --show-error "$INSTALLER_RELEASE_API_URL" -o "$metadata"
+  INSTALLER_REMOTE_TAG="$(sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' "$metadata" | head -n 1)"
+  INSTALLER_REMOTE_ZIP_URL="$(sed -n 's/.*"browser_download_url": *"\([^"]*c2-apple-silicon-installer[^"]*\.zip\)".*/\1/p' "$metadata" | head -n 1)"
+  [ -n "$INSTALLER_REMOTE_TAG" ] && [ -n "$INSTALLER_REMOTE_ZIP_URL" ]
+}
+
 zip_comment_sha() {
   unzip -z "$1" 2>/dev/null \
     | sed -n 's/^\([0-9a-f]\{40\}\)$/\1/p' \
     | head -n 1
+}
+
+prepare_installer_self_update() {
+  ACTIVE_TOOLS_DIR="$TOOLS_DIR"
+  ACTIVE_UPDATER_SCRIPT="$0"
+  ACTIVE_INSTALLER_VERSION="$(read_installer_version)"
+  INSTALLER_UPDATE_AVAILABLE=0
+
+  if [ "${C2_SKIP_INSTALLER_UPDATE:-0}" = "1" ]; then
+    echo "Installer self-update check skipped."
+    return
+  fi
+
+  say "Checking Furrypaw/c2-apple-silicon-installer latest release."
+  if ! latest_installer_release; then
+    echo "Could not check the installer release. Continuing with local installer tools."
+    return
+  fi
+
+  echo "Local installer version: ${ACTIVE_INSTALLER_VERSION:-unknown}"
+  echo "Latest installer version: $INSTALLER_REMOTE_TAG"
+
+  if [ "${C2_FORCE_INSTALLER_UPDATE:-0}" != "1" ] && ! version_gt "$INSTALLER_REMOTE_TAG" "$ACTIVE_INSTALLER_VERSION"; then
+    return
+  fi
+
+  local release_zip="$CACHE_DIR/c2-apple-silicon-installer-$INSTALLER_REMOTE_TAG.zip"
+  local release_dir="$WORK_DIR/installer-release"
+  local release_root
+  download "$INSTALLER_REMOTE_ZIP_URL" "$release_zip"
+  mkdir -p "$release_dir"
+  unzip -q "$release_zip" -d "$release_dir"
+  release_root="$(find "$release_dir" -maxdepth 2 -type d -name c2-apple-silicon-installer | head -n 1)"
+  if [ -z "$release_root" ] || [ ! -d "$release_root/tools/src" ] \
+      || [ ! -f "$release_root/Update Cultris II for Apple Silicon.command" ]; then
+    echo "Downloaded installer release did not contain the expected tools. Continuing with local tools."
+    return
+  fi
+
+  ACTIVE_TOOLS_DIR="$release_root/tools"
+  ACTIVE_UPDATER_SCRIPT="$release_root/Update Cultris II for Apple Silicon.command"
+  ACTIVE_INSTALLER_VERSION="$INSTALLER_REMOTE_TAG"
+  INSTALLER_UPDATE_AVAILABLE=1
+  echo "Using installer tools from $INSTALLER_REMOTE_TAG for this update."
 }
 
 copy_first() {
@@ -222,9 +304,6 @@ if [ ! -d "$TOOLS_DIR/src" ]; then
   pause_if_tty
   exit 1
 fi
-TOOLS_STAGING_DIR="$WORK_DIR/installer-support"
-mkdir -p "$TOOLS_STAGING_DIR"
-cp -R "$TOOLS_DIR" "$TOOLS_STAGING_DIR/tools"
 
 if pgrep -f "$GAME_DIR/resources/runtime/.*/bin/java.*cultris2.jar" >/dev/null 2>&1; then
   echo "Cultris II appears to be running. Please quit the game before updating."
@@ -233,6 +312,11 @@ if pgrep -f "$GAME_DIR/resources/runtime/.*/bin/java.*cultris2.jar" >/dev/null 2
 fi
 
 mkdir -p "$CACHE_DIR"
+prepare_installer_self_update
+TOOLS_DIR="$ACTIVE_TOOLS_DIR"
+TOOLS_STAGING_DIR="$WORK_DIR/installer-support"
+mkdir -p "$TOOLS_STAGING_DIR"
+cp -R "$TOOLS_DIR" "$TOOLS_STAGING_DIR/tools"
 
 LOCAL_SHA=""
 if [ -f "$GAME_DIR/.c2-upstream-stable-sha" ]; then
@@ -257,7 +341,8 @@ fi
 echo "Local upstream SHA: ${LOCAL_SHA:-not recorded}"
 echo "Latest upstream SHA: $REMOTE_SHA"
 
-if [ "${C2_FORCE_UPDATE:-0}" != "1" ] && [ -n "$LOCAL_SHA" ] && [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
+if [ "${C2_FORCE_UPDATE:-0}" != "1" ] && [ "$INSTALLER_UPDATE_AVAILABLE" != "1" ] \
+    && [ -n "$LOCAL_SHA" ] && [ "$LOCAL_SHA" = "$REMOTE_SHA" ]; then
   echo
   echo "Already up to date."
   pause_if_tty
@@ -473,8 +558,9 @@ SUPPORT_INSTALL_DIR="$INSTALL_ROOT/.c2-apple-silicon-installer"
 rm -rf "$SUPPORT_INSTALL_DIR"
 mkdir -p "$SUPPORT_INSTALL_DIR"
 cp -R "$TOOLS_STAGING_DIR/tools" "$SUPPORT_INSTALL_DIR/tools"
-if [ -f "$0" ]; then
-  cp "$0" "$INSTALL_ROOT/Update Cultris II.command"
+printf '%s\n' "$ACTIVE_INSTALLER_VERSION" > "$SUPPORT_INSTALL_DIR/version"
+if [ -f "$ACTIVE_UPDATER_SCRIPT" ]; then
+  cp "$ACTIVE_UPDATER_SCRIPT" "$INSTALL_ROOT/Update Cultris II.command"
 fi
 chmod +x \
   "$INSTALL_ROOT/Play Cultris II.command" \
