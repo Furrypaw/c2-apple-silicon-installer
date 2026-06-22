@@ -103,9 +103,21 @@ Restart the game after changing the file.
 
 ## Audio
 
-The old native BASS audio library is disabled on Apple Silicon because the bundled BASS binaries are not arm64. Short game sound effects are restored through Java's native arm64 audio path, so they work without Rosetta or VM emulation.
+Short game sound effects are restored through Java's native arm64 audio path, so they work without Rosetta or VM emulation.
 
-Music is still disabled for now because Cultris II uses MO3 tracker files that were previously decoded by BASS. Keeping that path disabled avoids loading x86 native audio code. This is not controlled by the sound-effects settings file.
+Music uses Cultris II's original MO3 tracker files through an arm64-native BASS bridge. The installer downloads the official macOS BASS package from Un4seen, extracts the arm64 `libbass.dylib`, and builds a tiny JNI bridge locally.
+
+BASS is downloaded from:
+
+`https://www.un4seen.com/files/bass24-osx.zip`
+
+Un4seen says BASS is free for non-commercial use. Commercial usage may require a BASS license.
+
+Music can be disabled in:
+
+`Desktop/C2/c2-patch/settings/music-enabled.txt`
+
+Use `1` to enable music or `0` to disable it. Restart the game after changing this file.
 
 Sound effects can be enabled or disabled in:
 

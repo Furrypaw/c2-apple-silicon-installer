@@ -15,6 +15,7 @@ ASM_URL="${ASM_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7
 ASM_COMMONS_URL="${ASM_COMMONS_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.7.1/asm-commons-9.7.1.jar}"
 LWJGL_JAR_URL="${LWJGL_JAR_URL:-https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-2.9.3-macos-aarch64.jar}"
 LWJGL_PLATFORM_URL="${LWJGL_PLATFORM_URL:-https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-platform-2.9.3-macos-aarch64.jar}"
+BASS_OSX_URL="${BASS_OSX_URL:-https://www.un4seen.com/files/bass24-osx.zip}"
 
 cleanup() {
   rm -rf "$WORK_DIR"
@@ -75,6 +76,46 @@ copy_first() {
   fi
 }
 
+install_bass_music_support() {
+  local game_dir="$1"
+  local lib_arm="$2"
+  local java_home="$3"
+  local bridge_src="$SCRIPT_DIR/tools/native/c2_bass_music.c"
+  local bass_dir="$WORK_DIR/bass-osx"
+  local bass_lib
+
+  mkdir -p "$bass_dir"
+  unzip -q "$CACHE_DIR/bass24-osx.zip" -d "$bass_dir"
+  bass_lib="$(find "$bass_dir" -name libbass.dylib -type f | head -n 1)"
+  if [ -z "$bass_lib" ]; then
+    echo "Could not find libbass.dylib in the BASS macOS package."
+    return 1
+  fi
+
+  if command -v lipo >/dev/null 2>&1; then
+    lipo "$bass_lib" -thin arm64 -output "$lib_arm/libbass.dylib" 2>/dev/null || cp "$bass_lib" "$lib_arm/libbass.dylib"
+  else
+    cp "$bass_lib" "$lib_arm/libbass.dylib"
+  fi
+
+  if ! command -v clang >/dev/null 2>&1; then
+    echo "Apple clang was not found, so MO3 music support could not be built."
+    return 1
+  fi
+  clang -dynamiclib -arch arm64 -O2 -mmacosx-version-min=11.0 \
+    -I"$java_home/include" \
+    -I"$java_home/include/darwin" \
+    "$bridge_src" \
+    -o "$lib_arm/libC2BassMusic.jnilib"
+
+  codesign -s - "$lib_arm/libbass.dylib" "$lib_arm/libC2BassMusic.jnilib" >/dev/null 2>&1 || true
+
+  mkdir -p "$game_dir/settings"
+  if [ ! -f "$game_dir/settings/music-enabled.txt" ]; then
+    printf '1\n' > "$game_dir/settings/music-enabled.txt"
+  fi
+}
+
 extract_class() {
   local class_path="$1"
   local out="$WORK_DIR/original-classes/$class_path.class"
@@ -116,6 +157,7 @@ download "$ASM_URL" "$CACHE_DIR/asm-9.7.1.jar"
 download "$ASM_COMMONS_URL" "$CACHE_DIR/asm-commons-9.7.1.jar"
 download "$LWJGL_JAR_URL" "$CACHE_DIR/lwjgl-2.9.3-macos-aarch64.jar"
 download "$LWJGL_PLATFORM_URL" "$CACHE_DIR/lwjgl-platform-2.9.3-macos-aarch64.jar"
+download "$BASS_OSX_URL" "$CACHE_DIR/bass24-osx.zip"
 
 say "Step 2/6: preparing the Desktop C2 folder."
 if [ -e "$INSTALL_ROOT" ]; then
@@ -168,6 +210,7 @@ if [ ! -f "$LIB_ARM/liblwjgl.jnilib" ] || [ ! -f "$LIB_ARM/openal.dylib" ]; then
   pause_if_tty
   exit 1
 fi
+install_bass_music_support "$GAME_DIR" "$LIB_ARM" "$JAVA_HOME_DIR"
 
 say "Step 5/6: patching Cultris II for Apple Silicon."
 PATCHER_CLASSES="$WORK_DIR/patcher-classes"
@@ -229,7 +272,8 @@ patch_class PatchClassVersion52 "zy_1113"
 
 "$JAVAC_BIN" -source 1.8 -target 1.8 -d "$PATCHED_CLASSES" \
   "$SCRIPT_DIR/tools/src/ReadBackgroundColor.java" \
-  "$SCRIPT_DIR/tools/src/C2JavaAudioEffects.java"
+  "$SCRIPT_DIR/tools/src/C2JavaAudioEffects.java" \
+  "$SCRIPT_DIR/tools/src/C2BassMusic.java"
 
 "$JAR_BIN" uf "$GAME_DIR/cultris2.jar" -C "$PATCHED_CLASSES" .
 zip -dq "$GAME_DIR/cultris2.jar" \

@@ -74,7 +74,6 @@ public final class C2JavaAudioEffects {
                 }
             }
             System.out.println("[C2 patch] Java audio effects enabled on Apple Silicon (" + loaded + " sounds)");
-            System.out.println("[C2 patch] BASS/MO3 music remains disabled to keep the game arm64-native.");
         } catch (Throwable t) {
             System.out.println("[C2 patch] Java audio effects unavailable: " + t);
         }

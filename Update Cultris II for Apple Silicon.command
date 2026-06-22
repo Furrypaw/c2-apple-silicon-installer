@@ -24,6 +24,7 @@ ASM_URL="${ASM_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7
 ASM_COMMONS_URL="${ASM_COMMONS_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.7.1/asm-commons-9.7.1.jar}"
 LWJGL_JAR_URL="${LWJGL_JAR_URL:-https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-2.9.3-macos-aarch64.jar}"
 LWJGL_PLATFORM_URL="${LWJGL_PLATFORM_URL:-https://files.betacraft.uk/launcher/v2/assets/libraries/lwjgl/lwjgl-platform-2.9.3-macos-aarch64.jar}"
+BASS_OSX_URL="${BASS_OSX_URL:-https://www.un4seen.com/files/bass24-osx.zip}"
 
 cleanup() {
   rm -rf "$WORK_DIR"
@@ -84,6 +85,46 @@ copy_first() {
   fi
 }
 
+install_bass_music_support() {
+  local game_dir="$1"
+  local lib_arm="$2"
+  local java_home="$3"
+  local bridge_src="$TOOLS_DIR/native/c2_bass_music.c"
+  local bass_dir="$WORK_DIR/bass-osx"
+  local bass_lib
+
+  mkdir -p "$bass_dir"
+  unzip -q "$CACHE_DIR/bass24-osx.zip" -d "$bass_dir"
+  bass_lib="$(find "$bass_dir" -name libbass.dylib -type f | head -n 1)"
+  if [ -z "$bass_lib" ]; then
+    echo "Could not find libbass.dylib in the BASS macOS package."
+    return 1
+  fi
+
+  if command -v lipo >/dev/null 2>&1; then
+    lipo "$bass_lib" -thin arm64 -output "$lib_arm/libbass.dylib" 2>/dev/null || cp "$bass_lib" "$lib_arm/libbass.dylib"
+  else
+    cp "$bass_lib" "$lib_arm/libbass.dylib"
+  fi
+
+  if ! command -v clang >/dev/null 2>&1; then
+    echo "Apple clang was not found, so MO3 music support could not be built."
+    return 1
+  fi
+  clang -dynamiclib -arch arm64 -O2 -mmacosx-version-min=11.0 \
+    -I"$java_home/include" \
+    -I"$java_home/include/darwin" \
+    "$bridge_src" \
+    -o "$lib_arm/libC2BassMusic.jnilib"
+
+  codesign -s - "$lib_arm/libbass.dylib" "$lib_arm/libC2BassMusic.jnilib" >/dev/null 2>&1 || true
+
+  mkdir -p "$game_dir/settings"
+  if [ ! -f "$game_dir/settings/music-enabled.txt" ]; then
+    printf '1\n' > "$game_dir/settings/music-enabled.txt"
+  fi
+}
+
 extract_class() {
   local class_path="$1"
   local out="$WORK_DIR/original-classes/$class_path.class"
@@ -104,6 +145,9 @@ find_java_tools() {
   JAVA_BIN="$(find "$NEW_GAME_DIR/resources/runtime" -path '*/Contents/Home/bin/java' -type f | head -n 1)"
   JAVAC_BIN="$(find "$NEW_GAME_DIR/resources/runtime" -path '*/Contents/Home/bin/javac' -type f | head -n 1)"
   JAR_BIN="$(find "$NEW_GAME_DIR/resources/runtime" -path '*/Contents/Home/bin/jar' -type f | head -n 1)"
+  if [ -n "$JAVA_BIN" ]; then
+    JAVA_HOME_DIR="$(cd "$(dirname "$JAVA_BIN")/.." && pwd)"
+  fi
 }
 
 preserve_user_data() {
@@ -122,6 +166,36 @@ preserve_user_data() {
       ! -name 'how_replays_work.txt' \
       -exec cp -p {} "$new_dir/replays/" \;
   fi
+}
+
+ensure_combo_goal_helper_setting() {
+  local settings_dir="$1"
+  local file="$settings_dir/comboGoalHelper.txt"
+  local enabled goal start print_max theoretical
+
+  if [ ! -f "$file" ]; then
+    return
+  fi
+
+  enabled="$(sed -n '2p' "$file" | tr -d '\r' | tr -d '[:space:]')"
+  goal="$(sed -n '5p' "$file" | tr -d '\r' | tr -d '[:space:]')"
+  start="$(sed -n '8p' "$file" | tr -d '\r' | tr -d '[:space:]')"
+  print_max="$(sed -n '11p' "$file" | tr -d '\r' | tr -d '[:space:]')"
+  theoretical="$(sed -n '14p' "$file" | tr -d '\r' | tr -d '[:space:]')"
+
+  case "$enabled" in ''|*[!0-9-]*) enabled="0" ;; esac
+  case "$goal" in ''|*[!0-9-]*) goal="14" ;; esac
+  case "$start" in ''|*[!0-9-]*) start="9" ;; esac
+  case "$print_max" in ''|*[!0-9-]*) print_max="1" ;; esac
+  case "$theoretical" in ''|*[!0-9-]*) theoretical="15" ;; esac
+
+  {
+    printf 'Enabled\n%s\n\n' "$enabled"
+    printf 'Combo goal\n%s\n\n' "$goal"
+    printf 'Combo at which to start printing the stats in chat\n%s\n\n' "$start"
+    printf 'Whether to print max hypothetical combo\n%s\n\n' "$print_max"
+    printf "Theoretical max combo. You shouldn't change this unless you're going for the 16\n%s\n" "$theoretical"
+  } > "$file"
 }
 
 if [ "$(uname -m)" != "arm64" ]; then
@@ -168,11 +242,16 @@ fi
 say "Checking shayklos/c2-patch stable branch."
 REMOTE_SHA="$(latest_upstream_sha || true)"
 if [ -z "$REMOTE_SHA" ]; then
-  echo "Could not check the upstream stable branch."
-  echo "You can force an update from the configured ZIP with:"
-  echo "C2_FORCE_UPDATE=1 \"$0\""
-  pause_if_tty
-  exit 1
+  if [ "${C2_FORCE_UPDATE:-0}" = "1" ]; then
+    REMOTE_SHA="forced-$(date +%Y%m%d%H%M%S)"
+    echo "Could not check the upstream stable branch. Forcing an update from the configured ZIP."
+  else
+    echo "Could not check the upstream stable branch."
+    echo "You can force an update from the configured ZIP with:"
+    echo "C2_FORCE_UPDATE=1 \"$0\""
+    pause_if_tty
+    exit 1
+  fi
 fi
 
 echo "Local upstream SHA: ${LOCAL_SHA:-not recorded}"
@@ -195,6 +274,7 @@ download "$ASM_URL" "$CACHE_DIR/asm-9.7.1.jar"
 download "$ASM_COMMONS_URL" "$CACHE_DIR/asm-commons-9.7.1.jar"
 download "$LWJGL_JAR_URL" "$CACHE_DIR/lwjgl-2.9.3-macos-aarch64.jar"
 download "$LWJGL_PLATFORM_URL" "$CACHE_DIR/lwjgl-platform-2.9.3-macos-aarch64.jar"
+download "$BASS_OSX_URL" "$CACHE_DIR/bass24-osx.zip"
 
 say "Preparing updated c2-patch."
 unzip -q "$PATCH_ZIP" -d "$WORK_DIR"
@@ -222,6 +302,7 @@ fi
 
 say "Preserving local settings and replay files."
 preserve_user_data "$GAME_DIR" "$NEW_GAME_DIR"
+ensure_combo_goal_helper_setting "$NEW_GAME_DIR/settings"
 
 say "Installing Apple Silicon native libraries."
 LIB_ARM="$NEW_GAME_DIR/resources/libs-arm64"
@@ -245,6 +326,7 @@ if [ ! -f "$LIB_ARM/liblwjgl.jnilib" ] || [ ! -f "$LIB_ARM/openal.dylib" ]; then
   pause_if_tty
   exit 1
 fi
+install_bass_music_support "$NEW_GAME_DIR" "$LIB_ARM" "$JAVA_HOME_DIR"
 
 say "Reapplying Apple Silicon patches."
 PATCHER_CLASSES="$WORK_DIR/patcher-classes"
@@ -306,7 +388,8 @@ patch_class PatchClassVersion52 "zy_1113"
 
 "$JAVAC_BIN" -source 1.8 -target 1.8 -d "$PATCHED_CLASSES" \
   "$TOOLS_DIR/src/ReadBackgroundColor.java" \
-  "$TOOLS_DIR/src/C2JavaAudioEffects.java"
+  "$TOOLS_DIR/src/C2JavaAudioEffects.java" \
+  "$TOOLS_DIR/src/C2BassMusic.java"
 
 "$JAR_BIN" uf "$NEW_GAME_DIR/cultris2.jar" -C "$PATCHED_CLASSES" .
 zip -dq "$NEW_GAME_DIR/cultris2.jar" \

@@ -30,21 +30,41 @@ public class PatchJavaAudioEffects {
                     emitPlay(mv);
                     return null;
                 }
+                if (name.equals("method14") && desc.equals("(I)V")) {
+                    emitPlayMusicOffset(mv);
+                    return null;
+                }
+                if (name.equals("method61") && desc.equals("()V")) {
+                    emitPlayMenuMusic(mv);
+                    return null;
+                }
+                if (name.equals("method89") && desc.equals("()V")) {
+                    emitEnsureMusic(mv);
+                    return null;
+                }
                 if (name.equals("method56") && desc.equals("()V")) {
                     emitShutdown(mv);
                     return null;
                 }
-                if ((name.equals("method14") && desc.equals("(I)V"))
-                        || (name.equals("method89") && desc.equals("()V"))
-                        || (name.equals("method61") && desc.equals("()V"))
-                        || (name.equals("method423") && desc.equals("(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"))
+                if ((name.equals("method423") && desc.equals("(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V"))
                         || (name.equals("method424") && desc.equals("(Lzg_1112;Ljava/lang/String;LVf_301;F)V"))
                         || (name.equals("readoggfileslist") && desc.equals("()V"))) {
                     emitReturn(mv);
                     return null;
                 }
-                if ((name.equals("method420") || name.equals("method421") || name.equals("method356")
-                        || name.equals("method426") || name.equals("getNthLine"))
+                if (name.equals("method421") && desc.equals("()Ljava/lang/String;")) {
+                    emitMusicString(mv, "currentUrl");
+                    return null;
+                }
+                if (name.equals("method356") && desc.equals("()Ljava/lang/String;")) {
+                    emitMusicString(mv, "currentArtist");
+                    return null;
+                }
+                if (name.equals("method426") && desc.equals("()Ljava/lang/String;")) {
+                    emitMusicString(mv, "currentTitle");
+                    return null;
+                }
+                if ((name.equals("method420") || name.equals("getNthLine"))
                         && desc.endsWith(")Ljava/lang/String;")) {
                     emitString(mv);
                     return null;
@@ -55,7 +75,7 @@ public class PatchJavaAudioEffects {
                     return null;
                 }
                 if (name.equals("method425") && desc.equals("()Ljava/util/Map;")) {
-                    emitEmptyMap(mv);
+                    emitMusicCatalog(mv);
                     return null;
                 }
                 return mv;
@@ -72,6 +92,7 @@ public class PatchJavaAudioEffects {
                 mv.visitMethodInsn(Opcodes.INVOKESTATIC, "JB_129", "method829", "()F", false);
                 mv.visitFieldInsn(Opcodes.PUTSTATIC, "UE_281", "field789", "F");
                 mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2JavaAudioEffects", "init", "()V", false);
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", "init", "()V", false);
                 mv.visitInsn(Opcodes.RETURN);
                 mv.visitMaxs(0, 0);
                 mv.visitEnd();
@@ -87,9 +108,35 @@ public class PatchJavaAudioEffects {
                 mv.visitEnd();
             }
 
+            private void emitPlayMusicOffset(MethodVisitor mv) {
+                mv.visitCode();
+                mv.visitVarInsn(Opcodes.ILOAD, 0);
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", "playByOffset", "(I)V", false);
+                mv.visitInsn(Opcodes.RETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            private void emitPlayMenuMusic(MethodVisitor mv) {
+                mv.visitCode();
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", "playMenuMusic", "()V", false);
+                mv.visitInsn(Opcodes.RETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            private void emitEnsureMusic(MethodVisitor mv) {
+                mv.visitCode();
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", "ensurePlaying", "()V", false);
+                mv.visitInsn(Opcodes.RETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
             private void emitShutdown(MethodVisitor mv) {
                 mv.visitCode();
                 mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2JavaAudioEffects", "shutdown", "()V", false);
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", "shutdown", "()V", false);
                 mv.visitInsn(Opcodes.RETURN);
                 mv.visitMaxs(0, 0);
                 mv.visitEnd();
@@ -118,9 +165,17 @@ public class PatchJavaAudioEffects {
                 mv.visitEnd();
             }
 
-            private void emitEmptyMap(MethodVisitor mv) {
+            private void emitMusicString(MethodVisitor mv, String methodName) {
                 mv.visitCode();
-                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/util/Collections", "emptyMap", "()Ljava/util/Map;", false);
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", methodName, "()Ljava/lang/String;", false);
+                mv.visitInsn(Opcodes.ARETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            private void emitMusicCatalog(MethodVisitor mv) {
+                mv.visitCode();
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", "catalog", "()Ljava/util/Map;", false);
                 mv.visitInsn(Opcodes.ARETURN);
                 mv.visitMaxs(0, 0);
                 mv.visitEnd();
