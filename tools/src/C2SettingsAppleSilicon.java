@@ -29,6 +29,8 @@ class c2settings {
     private static final String F_BLUR_AMOUNT       = DIR + "blurAmount.txt";
     private static final String F_FPS               = DIR + "FE-fpsvalue.txt";
     private static final String F_HZ                = DIR + "FE-hzvalue.txt";
+    private static final String F_DISPLAY_FULLSCREEN = DIR + "display-fullscreen.txt";
+    private static final String F_DISPLAY_WINDOW_SIZE = DIR + "display-window-size.txt";
     private static final String F_ENEMY_SOUND       = DIR + "od-enable-enemy-sounds.txt";
     private static final String F_SOUND_LIST        = DIR + "UE-oggfiles.txt";
     private static final String F_MUSIC_ENABLED     = DIR + "music-enabled.txt";
@@ -57,11 +59,11 @@ class c2settings {
     };
 
     // ----------------------------------------------------------------------------
-    private JToggleButton tbAnim, tbBlur, tbMusic, tbEnemySound, tbComboHelper, tbExplicitTimer;
+    private JToggleButton tbAnim, tbBlur, tbFullscreen, tbMusic, tbEnemySound, tbComboHelper, tbExplicitTimer;
     private JToggleButton tbConsoleGeneral, tbConsoleChat;
     private JToggleButton tbReplayOn;
     private JToggleButton[] tbSounds;
-    private JSpinner spBlur, spFps, spHz, spHardDrop, spLineClear;
+    private JSpinner spBlur, spFps, spHz, spWindowSize, spHardDrop, spLineClear;
     private JSpinner spBgRed, spBgGreen, spBgBlue;
     private JComboBox<String> cbVerbosity;
     private JPanel backgroundPreview;
@@ -122,6 +124,11 @@ class c2settings {
 
     private JScrollPane buildDisplayTab() {
         JPanel p = tabPanel();
+
+        p.add(sectionHeader("Window"));
+        tbFullscreen = addToggleRow(p, "Fullscreen", "Start Cultris II in fullscreen");
+        spWindowSize = addSpinnerRow(p, "Window size", 0, 0, 2400, 20,
+            "Startup window size", "0 keeps the game default. Changes apply after restarting Cultris II.");
 
         p.add(sectionHeader("Rendering"));
         tbAnim = addToggleRow(p, "Animations", "Show piece / line animations");
@@ -245,6 +252,8 @@ class c2settings {
 
     private void loadAll() {
         // Display
+        setToggle(tbFullscreen, readBool(F_DISPLAY_FULLSCREEN, false));
+        spWindowSize.setValue(readInt(F_DISPLAY_WINDOW_SIZE, 0));
         setToggle(tbAnim, readBool(F_ANIM_TOGGLE, false));
         setToggle(tbBlur, readBool(F_BLUR_TOGGLE, false));
         spBlur.setValue(readInt(F_BLUR_AMOUNT, 3));
@@ -308,6 +317,8 @@ class c2settings {
             writeFile(F_BLUR_AMOUNT,  spBlur.getValue().toString());
             writeFile(F_FPS,          spFps.getValue().toString());
             writeFile(F_HZ,           spHz.getValue().toString());
+            writeFile(F_DISPLAY_FULLSCREEN, tbFullscreen.isSelected() ? "1" : "0");
+            writeFile(F_DISPLAY_WINDOW_SIZE, spWindowSize.getValue().toString());
             writeFile(F_BACKGROUND_COLOR,
                 spBgRed.getValue() + ", " + spBgGreen.getValue() + ", " + spBgBlue.getValue());
             writeFile(F_MUSIC_ENABLED, tbMusic.isSelected() ? "1" : "0");

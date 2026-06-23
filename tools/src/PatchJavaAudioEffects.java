@@ -69,8 +69,11 @@ public class PatchJavaAudioEffects {
                     emitString(mv);
                     return null;
                 }
-                if ((name.equals("method227") && desc.equals("()Z"))
-                        || (name.equals("fpsfoundhere") && desc.equals("(F)Z"))) {
+                if (name.equals("fpsfoundhere") && desc.equals("(F)Z")) {
+                    emitMusicUpdateFalse(mv);
+                    return null;
+                }
+                if (name.equals("method227") && desc.equals("()Z")) {
                     emitFalse(mv);
                     return null;
                 }
@@ -159,6 +162,15 @@ public class PatchJavaAudioEffects {
 
             private void emitFalse(MethodVisitor mv) {
                 mv.visitCode();
+                mv.visitInsn(Opcodes.ICONST_0);
+                mv.visitInsn(Opcodes.IRETURN);
+                mv.visitMaxs(0, 0);
+                mv.visitEnd();
+            }
+
+            private void emitMusicUpdateFalse(MethodVisitor mv) {
+                mv.visitCode();
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "C2BassMusic", "update", "()V", false);
                 mv.visitInsn(Opcodes.ICONST_0);
                 mv.visitInsn(Opcodes.IRETURN);
                 mv.visitMaxs(0, 0);

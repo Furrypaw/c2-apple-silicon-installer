@@ -15,16 +15,29 @@ public class PatchDisplayForceWindowed {
         ClassVisitor cv = new ClassVisitor(Opcodes.ASM9, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                if (name.equals("method2981") && desc.equals("(Lorg/lwjgl/opengl/PixelFormat;Lorg/lwjgl/opengl/k_886;Lorg/lwjgl/opengl/CB_726;)V")) {
+                    MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
+                    return new MethodVisitor(Opcodes.ASM9, mv) {
+                        @Override
+                        public void visitInsn(int opcode) {
+                            if (opcode == Opcodes.RETURN) {
+                                super.visitInsn(Opcodes.ICONST_1);
+                                super.visitMethodInsn(Opcodes.INVOKESTATIC, "org/lwjgl/opengl/Display", "method3040", "(Z)V", false);
+                            }
+                            super.visitInsn(opcode);
+                        }
+                    };
+                }
                 if (name.equals("method3040") && desc.equals("(Z)V")) {
                     MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
                     mv.visitCode();
-                    mv.visitInsn(Opcodes.ICONST_0);
+                    mv.visitVarInsn(Opcodes.ILOAD, 0);
                     mv.visitFieldInsn(Opcodes.PUTSTATIC, "org/lwjgl/opengl/Display", "field3277", "Z");
                     mv.visitMethodInsn(Opcodes.INVOKESTATIC, "org/lwjgl/opengl/Display", "method3019", "()Z", false);
                     Label done = new Label();
                     mv.visitJumpInsn(Opcodes.IFEQ, done);
                     mv.visitFieldInsn(Opcodes.GETSTATIC, "org/lwjgl/opengl/Display", "field3290", "Lorg/lwjgl/opengl/m_893;");
-                    mv.visitInsn(Opcodes.ICONST_0);
+                    mv.visitVarInsn(Opcodes.ILOAD, 0);
                     mv.visitMethodInsn(Opcodes.INVOKEINTERFACE, "org/lwjgl/opengl/m_893", "method4721", "(Z)V", true);
                     mv.visitLabel(done);
                     mv.visitInsn(Opcodes.RETURN);

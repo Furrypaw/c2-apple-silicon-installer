@@ -46,11 +46,15 @@ public final class C2BassMusic {
     };
 
     private static final Random RANDOM = new Random();
+    private static final float ORIGINAL_MUSIC_GAIN = 0.45f;
+    private static final long VOLUME_REFRESH_INTERVAL_MS = 50L;
     private static boolean initialized;
     private static boolean available;
     private static boolean enabled;
     private static int currentHandle;
     private static int currentTrack = -1;
+    private static long lastVolumeRefresh;
+    private static float lastAppliedVolume = -1.0f;
 
     private C2BassMusic() {
     }
@@ -101,9 +105,22 @@ public final class C2BassMusic {
     }
 
     public static synchronized void ensurePlaying() {
-        if (available && enabled && currentHandle != 0 && !nativeIsActive(currentHandle)) {
-            playTrack(RANDOM.nextInt(TRACKS.length));
+        if (!available || !enabled || currentHandle == 0) {
+            return;
         }
+        if (!nativeIsActive(currentHandle)) {
+            playTrack(RANDOM.nextInt(TRACKS.length));
+            return;
+        }
+        refreshVolume(false);
+    }
+
+    public static synchronized void update() {
+        ensurePlaying();
+    }
+
+    public static synchronized void updateVolumeNow() {
+        refreshVolume(true);
     }
 
     public static synchronized String currentUrl() {
@@ -159,7 +176,7 @@ public final class C2BassMusic {
                 System.out.println("[C2 patch] Could not load music " + TRACKS[index].fileName + ", BASS error " + nativeError());
                 return;
             }
-            nativeSetVolume(handle, 0.45f);
+            nativeSetVolume(handle, readGameMusicVolume());
             if (!nativePlay(handle, true)) {
                 System.out.println("[C2 patch] Could not play music " + TRACKS[index].fileName + ", BASS error " + nativeError());
                 nativeFreeMusic(handle);
@@ -167,9 +184,52 @@ public final class C2BassMusic {
             }
             currentHandle = handle;
             currentTrack = index;
+            refreshVolume(true);
         } catch (Throwable t) {
             System.out.println("[C2 patch] Music playback failed: " + t);
         }
+    }
+
+    private static void refreshVolume(boolean force) {
+        if (currentHandle == 0) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (!force && now - lastVolumeRefresh < VOLUME_REFRESH_INTERVAL_MS) {
+            return;
+        }
+        lastVolumeRefresh = now;
+        float volume = readGameMusicVolume();
+        if (force || Math.abs(volume - lastAppliedVolume) > 0.001f) {
+            nativeSetVolume(currentHandle, volume);
+            lastAppliedVolume = volume;
+        }
+    }
+
+    private static float readGameMusicVolume() {
+        Float value = invokeVolumeMethod("JB_129", "method829");
+        if (value == null) {
+            value = invokeVolumeMethod("JB", "method829");
+        }
+        float gameVolume = value == null ? 1.0f : value.floatValue();
+        if (Float.isNaN(gameVolume) || Float.isInfinite(gameVolume)) {
+            gameVolume = 1.0f;
+        }
+        gameVolume = Math.max(0.0f, Math.min(1.0f, gameVolume));
+        return ORIGINAL_MUSIC_GAIN * gameVolume;
+    }
+
+    private static Float invokeVolumeMethod(String className, String methodName) {
+        try {
+            Class<?> settings = Class.forName(className);
+            Method method = settings.getMethod(methodName);
+            Object value = method.invoke(null);
+            if (value instanceof Number) {
+                return Float.valueOf(((Number) value).floatValue());
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
     }
 
     private static Track currentTrack() {

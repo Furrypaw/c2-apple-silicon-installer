@@ -53,6 +53,10 @@ It does not include the Cultris II game jar or Java runtime in this repository. 
 
 Use `C2 Settings.command` to change common options without editing text files.
 
+## Resize Warning
+
+Window resizing is available, but it is experimental and can be unstable on Apple Silicon. Cultris II uses old LWJGL 2 OpenGL code, and macOS now runs OpenGL through Apple's Metal-backed compatibility layer. If the game crashes while resizing, reopen it and avoid dragging the window continuously. Fullscreen and startup window size controls are available in `C2 Settings.command`.
+
 ## Where the Game Comes From
 
 The installer downloads the original `shayklos/c2-patch` stable ZIP, extracts `cultris2.jar`, then patches that jar locally on your Mac for Apple Silicon.
@@ -95,7 +99,7 @@ C2_FORCE_UPDATE=1 ~/Desktop/C2/Update\ Cultris\ II.command
 
 Short game sound effects work through Java's native arm64 audio path, so they do not require Rosetta or VM emulation.
 
-Music uses Cultris II's original MO3 tracker files through an arm64-native BASS bridge. The installer downloads the official macOS BASS package from Un4seen, extracts the arm64 `libbass.dylib`, and builds a tiny JNI bridge locally.
+Music uses Cultris II's original MO3 tracker files through an arm64-native BASS bridge. The in-game music volume slider is hooked into that bridge, so music volume changes no longer require restarting the game. The installer downloads the official macOS BASS package from Un4seen, extracts the arm64 `libbass.dylib`, and builds a tiny JNI bridge locally.
 
 BASS is downloaded from:
 

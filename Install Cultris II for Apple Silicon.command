@@ -10,7 +10,7 @@ C2_PATCH_URL="${C2_PATCH_URL:-https://github.com/shayklos/c2-patch/archive/refs/
 C2_PATCH_BRANCH_API_URL="${C2_PATCH_BRANCH_API_URL:-https://api.github.com/repos/shayklos/c2-patch/branches/stable}"
 C2_PATCH_BACKUP_URL="${C2_PATCH_BACKUP_URL:-https://data.catgc.com/c2-patch-stable%20%2821.06.26%29.zip}"
 C2_PATCH_JAR_BACKUP_URL="${C2_PATCH_JAR_BACKUP_URL:-https://data.catgc.com/cultris2.jar}"
-INSTALLER_VERSION="v1.3.3"
+INSTALLER_VERSION="v1.4.0"
 ZULU_JDK_URL="${ZULU_JDK_URL:-https://cdn.azul.com/zulu/bin/zulu8.94.0.17-ca-jdk8.0.492-macosx_aarch64.zip}"
 ASM_URL="${ASM_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar}"
 ASM_COMMONS_URL="${ASM_COMMONS_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.7.1/asm-commons-9.7.1.jar}"
@@ -225,6 +225,8 @@ PATCHER_CP="$PATCHER_CLASSES:$CACHE_DIR/asm-9.7.1.jar:$CACHE_DIR/asm-commons-9.7
   "$SCRIPT_DIR/tools/src/PatchJavaAudioEffects.java" \
   "$SCRIPT_DIR/tools/src/PatchClassVersion52.java" \
   "$SCRIPT_DIR/tools/src/PatchDisplayForceWindowed.java" \
+  "$SCRIPT_DIR/tools/src/PatchDisplayStartupSettings.java" \
+  "$SCRIPT_DIR/tools/src/PatchMusicVolumeSettingHook.java" \
   "$SCRIPT_DIR/tools/src/PatchLWJGLArmSupport.java" \
   "$SCRIPT_DIR/tools/src/RemapArmMacLWJGL.java"
 
@@ -237,6 +239,8 @@ extract_class "org/lwjgl/E_681"
 extract_class "org/lwjgl/Sys"
 extract_class "org/lwjgl/input/K_701"
 extract_class "org/lwjgl/opengl/Display"
+extract_class "FE_76"
+extract_class "JB_129"
 extract_class "zy_1113"
 
 patch_class PatchJavaAudioEffects "UE_281"
@@ -244,6 +248,8 @@ patch_class PatchLWJGLArmSupport "org/lwjgl/E_681"
 patch_class PatchLWJGLArmSupport "org/lwjgl/Sys"
 patch_class PatchLWJGLArmSupport "org/lwjgl/input/K_701"
 patch_class PatchDisplayForceWindowed "org/lwjgl/opengl/Display"
+patch_class PatchDisplayStartupSettings "FE_76"
+patch_class PatchMusicVolumeSettingHook "JB_129"
 patch_class PatchClassVersion52 "zy_1113"
 
 if [ -f "$GAME_DIR/src/frontend/ColorPicker.java" ]; then
@@ -264,6 +270,7 @@ fi
   done
 } > "$WORK_DIR/helper-sources.txt"
 printf '%s\n' "$SCRIPT_DIR/tools/src/C2SettingsAppleSilicon.java" >> "$WORK_DIR/helper-sources.txt"
+printf '%s\n' "$SCRIPT_DIR/tools/src/C2DisplaySettings.java" >> "$WORK_DIR/helper-sources.txt"
 find "$SCRIPT_DIR/tools/src/java8compat" -name '*.java' -print >> "$WORK_DIR/helper-sources.txt"
 printf '%s\n' "$SCRIPT_DIR/tools/src/java8stubs/zy_1113.java" >> "$WORK_DIR/helper-sources.txt"
 
@@ -333,7 +340,45 @@ cat > "$INSTALL_ROOT/Play Cultris II.command" <<'EOF'
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$ROOT/c2-patch/launchers/macOS-cultris2.command"
+C2_TERMINAL_TTY="$(tty 2>/dev/null || true)"
+C2_TERMINAL_WINDOW_ID=""
+if [ "${TERM_PROGRAM:-}" = "Apple_Terminal" ] && [ -n "$C2_TERMINAL_TTY" ] && [ "$C2_TERMINAL_TTY" != "not a tty" ]; then
+  C2_TERMINAL_WINDOW_ID="$(osascript <<OSA 2>/dev/null || true
+tell application "Terminal"
+  repeat with w in windows
+    repeat with t in tabs of w
+      if tty of t is "$C2_TERMINAL_TTY" then
+        return id of w
+      end if
+    end repeat
+  end repeat
+end tell
+OSA
+)"
+fi
+
+close_terminal_on_success() {
+  if [ "${C2_KEEP_TERMINAL:-0}" = "1" ] || [ "${TERM_PROGRAM:-}" != "Apple_Terminal" ]; then
+    return
+  fi
+  (
+    sleep 1
+    if [ -n "$C2_TERMINAL_WINDOW_ID" ]; then
+      osascript <<OSA
+tell application "Terminal"
+  close (first window whose id is $C2_TERMINAL_WINDOW_ID)
+end tell
+OSA
+    fi
+  ) >/dev/null 2>&1 &
+}
+
+"$ROOT/c2-patch/launchers/macOS-cultris2.command"
+status=$?
+if [ "$status" -eq 0 ]; then
+  close_terminal_on_success
+fi
+exit "$status"
 EOF
 
 cat > "$INSTALL_ROOT/C2 Settings.command" <<'EOF'
@@ -341,7 +386,45 @@ cat > "$INSTALL_ROOT/C2 Settings.command" <<'EOF'
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$ROOT/c2-patch/launchers/macOS-c2settings.command"
+C2_TERMINAL_TTY="$(tty 2>/dev/null || true)"
+C2_TERMINAL_WINDOW_ID=""
+if [ "${TERM_PROGRAM:-}" = "Apple_Terminal" ] && [ -n "$C2_TERMINAL_TTY" ] && [ "$C2_TERMINAL_TTY" != "not a tty" ]; then
+  C2_TERMINAL_WINDOW_ID="$(osascript <<OSA 2>/dev/null || true
+tell application "Terminal"
+  repeat with w in windows
+    repeat with t in tabs of w
+      if tty of t is "$C2_TERMINAL_TTY" then
+        return id of w
+      end if
+    end repeat
+  end repeat
+end tell
+OSA
+)"
+fi
+
+close_terminal_on_success() {
+  if [ "${C2_KEEP_TERMINAL:-0}" = "1" ] || [ "${TERM_PROGRAM:-}" != "Apple_Terminal" ]; then
+    return
+  fi
+  (
+    sleep 1
+    if [ -n "$C2_TERMINAL_WINDOW_ID" ]; then
+      osascript <<OSA
+tell application "Terminal"
+  close (first window whose id is $C2_TERMINAL_WINDOW_ID)
+end tell
+OSA
+    fi
+  ) >/dev/null 2>&1 &
+}
+
+"$ROOT/c2-patch/launchers/macOS-c2settings.command"
+status=$?
+if [ "$status" -eq 0 ]; then
+  close_terminal_on_success
+fi
+exit "$status"
 EOF
 
 chmod +x \
