@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.nio.file.*;
+import javax.swing.text.DefaultFormatter;
 import java.util.*;
 import java.util.List;
 
@@ -58,17 +59,17 @@ class c2settings {
         "BPM Restricted Eat", "Impressive", "Perfect",
         "Godlike"
     };
-
     // ----------------------------------------------------------------------------
     private JToggleButton tbAnim, tbBlur, tbFullscreen, tbDisableResize, tbMusic, tbEnemySound, tbComboHelper, tbExplicitTimer;
     private JToggleButton tbConsoleGeneral, tbConsoleChat;
     private JToggleButton tbReplayOn;
     private JToggleButton[] tbSounds;
-    private JSpinner spBlur, spFps, spHz, spWindowSize, spHardDrop, spLineClear;
+    private JSpinner spBlur, spFps, spHz, spWindowWidth, spWindowHeight, spHardDrop, spLineClear;
     private JSpinner spBgRed, spBgGreen, spBgBlue;
     private JComboBox<String> cbVerbosity;
     private JPanel backgroundPreview;
     private JLabel statusLabel;
+    private boolean updatingWindowSize;
 
     // ----------------------------------------------------------------------------
     public static void main(String[] args) {
@@ -132,10 +133,9 @@ class c2settings {
 
         p.add(sectionHeader("Window"));
         tbFullscreen = addToggleRow(p, "Fullscreen", "Start Cultris II in fullscreen");
-        tbDisableResize = addToggleRow(p, "Disable window resizing",
-            "Safer default. Turn OFF only if you want experimental resize / fullscreen. Changes apply after restarting Cultris II.");
-        spWindowSize = addSpinnerRow(p, "Window size", 0, 0, 2400, 20,
-            "Startup window size", "0 keeps the game default. Changes apply after restarting Cultris II.");
+        tbDisableResize = addTallToggleRow(p, "Disable window resizing",
+            "<html>Safer default. Turn OFF only if you want experimental resize / fullscreen.<br>Changes apply after restarting Cultris II.</html>");
+        addWindowSizeRow(p);
 
         p.add(sectionHeader("Rendering"));
         tbAnim = addToggleRow(p, "Animations", "Show piece / line animations");
@@ -261,7 +261,7 @@ class c2settings {
         // Display
         setToggle(tbFullscreen, readBool(F_DISPLAY_FULLSCREEN, false));
         setToggle(tbDisableResize, readBool(F_DISABLE_WINDOW_RESIZE, true));
-        spWindowSize.setValue(readInt(F_DISPLAY_WINDOW_SIZE, 0));
+        setWindowWidth(readInt(F_DISPLAY_WINDOW_SIZE, 0));
         setToggle(tbAnim, readBool(F_ANIM_TOGGLE, false));
         setToggle(tbBlur, readBool(F_BLUR_TOGGLE, false));
         spBlur.setValue(readInt(F_BLUR_AMOUNT, 3));
@@ -327,7 +327,7 @@ class c2settings {
             writeFile(F_HZ,           spHz.getValue().toString());
             writeFile(F_DISPLAY_FULLSCREEN, tbFullscreen.isSelected() ? "1" : "0");
             writeFile(F_DISABLE_WINDOW_RESIZE, tbDisableResize.isSelected() ? "1" : "0");
-            writeFile(F_DISPLAY_WINDOW_SIZE, spWindowSize.getValue().toString());
+            writeFile(F_DISPLAY_WINDOW_SIZE, Integer.toString(windowWidthValue()));
             writeFile(F_BACKGROUND_COLOR,
                 spBgRed.getValue() + ", " + spBgGreen.getValue() + ", " + spBgBlue.getValue());
             writeFile(F_MUSIC_ENABLED, tbMusic.isSelected() ? "1" : "0");
@@ -380,17 +380,28 @@ class c2settings {
     // ----------------------------------------------------------------------------
 
     private JToggleButton addToggleRow(JPanel parent, String label, String tooltip) {
+        return addToggleRow(parent, label, tooltip, 44);
+    }
+
+    private JToggleButton addTallToggleRow(JPanel parent, String label, String tooltip) {
+        return addToggleRow(parent, label, tooltip, 58);
+    }
+
+    private JToggleButton addToggleRow(JPanel parent, String label, String tooltip, int rowHeight) {
         JPanel row = row(parent.getComponentCount() % 2 == 0 ? BG_ROW : BG_ROW_ALT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, rowHeight));
 
         JLabel lbl = new JLabel(label);
         lbl.setFont(baseFont());
         lbl.setForeground(FG);
-        lbl.setPreferredSize(new Dimension(210, 28));
+        lbl.setPreferredSize(new Dimension(190, 28));
         if (!tooltip.isEmpty()) lbl.setToolTipText(tooltip);
 
         JLabel hint = new JLabel(tooltip);
         hint.setFont(smallFont());
         hint.setForeground(FG_DIM);
+        hint.setPreferredSize(new Dimension(215, rowHeight - 12));
+        hint.setMaximumSize(new Dimension(215, rowHeight - 12));
 
         JToggleButton tb = new JToggleButton("OFF");
         tb.setPreferredSize(new Dimension(64, 28));
@@ -409,6 +420,50 @@ class c2settings {
 
     private JSpinner addSpinnerRow(JPanel parent, String label, int def, int min, int max, int step, String tooltip) {
         return addSpinnerRow(parent, label, def, min, max, step, tooltip, null);
+    }
+
+    private void addWindowSizeRow(JPanel parent) {
+        Color rowBg = parent.getComponentCount() % 2 == 0 ? BG_ROW : BG_ROW_ALT;
+        JPanel row = row(rowBg);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+
+        JLabel lbl = new JLabel("Window size");
+        lbl.setFont(baseFont());
+        lbl.setForeground(FG);
+        lbl.setPreferredSize(new Dimension(170, 28));
+        lbl.setToolTipText("Startup window size. Values are locked to 16:9. Changes apply after restarting Cultris II.");
+
+        JLabel hint = new JLabel("16:9, 0 x 0 = default");
+        hint.setFont(smallFont());
+        hint.setForeground(FG_DIM);
+        hint.setPreferredSize(new Dimension(150, 28));
+        hint.setMaximumSize(new Dimension(150, 28));
+
+        spWindowWidth = new JSpinner(new SpinnerNumberModel(0, 0, 7680, 1));
+        spWindowHeight = new JSpinner(new SpinnerNumberModel(0, 0, 4320, 1));
+        spWindowWidth.setPreferredSize(new Dimension(78, 30));
+        spWindowWidth.setMaximumSize(new Dimension(78, 30));
+        spWindowHeight.setPreferredSize(new Dimension(78, 30));
+        spWindowHeight.setMaximumSize(new Dimension(78, 30));
+        styleSpinner(spWindowWidth);
+        styleSpinner(spWindowHeight);
+        spWindowWidth.setToolTipText("Window width in pixels");
+        spWindowHeight.setToolTipText("Window height in pixels");
+        spWindowWidth.addChangeListener(e -> syncWindowHeightFromWidth());
+        spWindowHeight.addChangeListener(e -> syncWindowWidthFromHeight());
+
+        JLabel widthLabel = smallLabel("W");
+        JLabel heightLabel = smallLabel("H");
+
+        row.add(lbl);
+        row.add(hint);
+        row.add(Box.createHorizontalGlue());
+        row.add(widthLabel);
+        row.add(spWindowWidth);
+        row.add(Box.createHorizontalStrut(8));
+        row.add(heightLabel);
+        row.add(spWindowHeight);
+        parent.add(row);
     }
 
     private JSpinner addSpinnerRow(JPanel parent, String label, int def, int min, int max, int step, String tooltip, String hint) {
@@ -456,6 +511,10 @@ class c2settings {
     }
 
     private JLabel rgbLabel(String text) {
+        return smallLabel(text);
+    }
+
+    private JLabel smallLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(smallFont());
         label.setForeground(FG_DIM);
@@ -591,6 +650,9 @@ class c2settings {
         tf.setForeground(FG);
         tf.setCaretColor(FG);
         tf.setEditable(true);
+        if (tf.getFormatter() instanceof DefaultFormatter) {
+            ((DefaultFormatter) tf.getFormatter()).setCommitsOnValidEdit(true);
+        }
         tf.setBorder(new EmptyBorder(0, 4, 0, 4));
         sp.setBorder(BorderFactory.createLineBorder(BORDER_COLOR));
     }
@@ -721,6 +783,56 @@ class c2settings {
             return clampColor(((Number) value).intValue());
         }
         return def;
+    }
+
+    private void setWindowWidth(int width) {
+        updatingWindowSize = true;
+        int safeWidth = Math.max(0, width);
+        spWindowWidth.setValue(safeWidth);
+        spWindowHeight.setValue(widthToHeight(safeWidth));
+        updatingWindowSize = false;
+    }
+
+    private void syncWindowHeightFromWidth() {
+        if (updatingWindowSize) return;
+        updatingWindowSize = true;
+        int width = windowWidthValue();
+        spWindowHeight.setValue(widthToHeight(width));
+        updatingWindowSize = false;
+    }
+
+    private void syncWindowWidthFromHeight() {
+        if (updatingWindowSize) return;
+        updatingWindowSize = true;
+        int height = windowHeightValue();
+        spWindowWidth.setValue(heightToWidth(height));
+        updatingWindowSize = false;
+    }
+
+    private int widthToHeight(int width) {
+        if (width <= 0) return 0;
+        return Math.round(width * 9.0f / 16.0f);
+    }
+
+    private int heightToWidth(int height) {
+        if (height <= 0) return 0;
+        return Math.round(height * 16.0f / 9.0f);
+    }
+
+    private int windowWidthValue() {
+        Object value = spWindowWidth.getValue();
+        if (value instanceof Number) {
+            return Math.max(0, ((Number) value).intValue());
+        }
+        return 0;
+    }
+
+    private int windowHeightValue() {
+        Object value = spWindowHeight.getValue();
+        if (value instanceof Number) {
+            return Math.max(0, ((Number) value).intValue());
+        }
+        return 0;
     }
 
     private void writeFile(String path, String content) throws IOException {

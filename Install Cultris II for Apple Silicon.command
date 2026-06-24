@@ -310,20 +310,24 @@ if [ -z "$JAVA_BIN" ]; then
 fi
 
 cd "$GAME_DIR"
-JAVA_ARGS=()
 RESIZE_SETTING="1"
 if [ -f "$GAME_DIR/settings/disable-window-resize.txt" ]; then
   RESIZE_SETTING="$(head -n 1 "$GAME_DIR/settings/disable-window-resize.txt" | tr -d '[:space:]')"
 fi
-if [ "$RESIZE_SETTING" != "0" ]; then
-  JAVA_ARGS+=("-Dc2.disableWindowResize=true")
-fi
 
 set +e
-"$JAVA_BIN" "${JAVA_ARGS[@]}" \
-  -Dapple.awt.application.name="Cultris II" \
-  -Djava.library.path="$GAME_DIR/resources/libs-arm64" \
-  -jar "$GAME_DIR/cultris2.jar"
+if [ "$RESIZE_SETTING" != "0" ]; then
+  "$JAVA_BIN" \
+    -Dc2.disableWindowResize=true \
+    -Dapple.awt.application.name="Cultris II" \
+    -Djava.library.path="$GAME_DIR/resources/libs-arm64" \
+    -jar "$GAME_DIR/cultris2.jar"
+else
+  "$JAVA_BIN" \
+    -Dapple.awt.application.name="Cultris II" \
+    -Djava.library.path="$GAME_DIR/resources/libs-arm64" \
+    -jar "$GAME_DIR/cultris2.jar"
+fi
 status=$?
 set -e
 if [ "$status" -ne 0 ]; then
