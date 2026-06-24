@@ -114,7 +114,11 @@ class c2settings {
 
         loadAll();
 
-        frame.setSize(560, 680);
+        Rectangle usable = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+        int width = Math.min(620, Math.max(560, usable.width - 80));
+        int height = Math.min(600, Math.max(480, usable.height - 100));
+        frame.setMinimumSize(new Dimension(540, 480));
+        frame.setSize(width, height);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
@@ -129,7 +133,7 @@ class c2settings {
         p.add(sectionHeader("Window"));
         tbFullscreen = addToggleRow(p, "Fullscreen", "Start Cultris II in fullscreen");
         tbDisableResize = addToggleRow(p, "Disable window resizing",
-            "Use this if resizing or fullscreen crashes on this Mac. Changes apply after restarting Cultris II.");
+            "Safer default. Turn OFF only if you want experimental resize / fullscreen. Changes apply after restarting Cultris II.");
         spWindowSize = addSpinnerRow(p, "Window size", 0, 0, 2400, 20,
             "Startup window size", "0 keeps the game default. Changes apply after restarting Cultris II.");
 
@@ -256,7 +260,7 @@ class c2settings {
     private void loadAll() {
         // Display
         setToggle(tbFullscreen, readBool(F_DISPLAY_FULLSCREEN, false));
-        setToggle(tbDisableResize, readBool(F_DISABLE_WINDOW_RESIZE, false));
+        setToggle(tbDisableResize, readBool(F_DISABLE_WINDOW_RESIZE, true));
         spWindowSize.setValue(readInt(F_DISPLAY_WINDOW_SIZE, 0));
         setToggle(tbAnim, readBool(F_ANIM_TOGGLE, false));
         setToggle(tbBlur, readBool(F_BLUR_TOGGLE, false));

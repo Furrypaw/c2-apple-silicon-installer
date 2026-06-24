@@ -10,7 +10,7 @@ C2_PATCH_URL="${C2_PATCH_URL:-https://github.com/shayklos/c2-patch/archive/refs/
 C2_PATCH_BRANCH_API_URL="${C2_PATCH_BRANCH_API_URL:-https://api.github.com/repos/shayklos/c2-patch/branches/stable}"
 C2_PATCH_BACKUP_URL="${C2_PATCH_BACKUP_URL:-https://data.catgc.com/c2-patch-stable%20%2821.06.26%29.zip}"
 C2_PATCH_JAR_BACKUP_URL="${C2_PATCH_JAR_BACKUP_URL:-https://data.catgc.com/cultris2.jar}"
-INSTALLER_VERSION="v1.4.1"
+INSTALLER_VERSION="v1.4.2"
 ZULU_JDK_URL="${ZULU_JDK_URL:-https://cdn.azul.com/zulu/bin/zulu8.94.0.17-ca-jdk8.0.492-macosx_aarch64.zip}"
 ASM_URL="${ASM_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar}"
 ASM_COMMONS_URL="${ASM_COMMONS_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm-commons/9.7.1/asm-commons-9.7.1.jar}"
@@ -311,7 +311,11 @@ fi
 
 cd "$GAME_DIR"
 JAVA_ARGS=()
-if [ -f "$GAME_DIR/settings/disable-window-resize.txt" ] && [ "$(head -n 1 "$GAME_DIR/settings/disable-window-resize.txt" | tr -d '[:space:]')" = "1" ]; then
+RESIZE_SETTING="1"
+if [ -f "$GAME_DIR/settings/disable-window-resize.txt" ]; then
+  RESIZE_SETTING="$(head -n 1 "$GAME_DIR/settings/disable-window-resize.txt" | tr -d '[:space:]')"
+fi
+if [ "$RESIZE_SETTING" != "0" ]; then
   JAVA_ARGS+=("-Dc2.disableWindowResize=true")
 fi
 
