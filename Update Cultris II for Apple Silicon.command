@@ -19,7 +19,7 @@ WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/c2-arm-update.XXXXXX")"
 C2_PATCH_URL="${C2_PATCH_URL:-https://github.com/shayklos/c2-patch/archive/refs/heads/stable.zip}"
 C2_PATCH_BRANCH_API_URL="${C2_PATCH_BRANCH_API_URL:-https://api.github.com/repos/shayklos/c2-patch/branches/stable}"
 C2_PATCH_BACKUP_URL="${C2_PATCH_BACKUP_URL:-https://data.catgc.com/c2-patch-stable%20%2821.06.26%29.zip}"
-INSTALLER_VERSION="v1.4.0"
+INSTALLER_VERSION="v1.4.1"
 INSTALLER_RELEASE_API_URL="${INSTALLER_RELEASE_API_URL:-https://api.github.com/repos/Furrypaw/c2-apple-silicon-installer/releases/latest}"
 ZULU_JDK_URL="${ZULU_JDK_URL:-https://cdn.azul.com/zulu/bin/zulu8.94.0.17-ca-jdk8.0.492-macosx_aarch64.zip}"
 ASM_URL="${ASM_URL:-https://repo1.maven.org/maven2/org/ow2/asm/asm/9.7.1/asm-9.7.1.jar}"
@@ -425,6 +425,7 @@ PATCHER_CP="$PATCHER_CLASSES:$CACHE_DIR/asm-9.7.1.jar:$CACHE_DIR/asm-commons-9.7
   "$TOOLS_DIR/src/PatchJavaAudioEffects.java" \
   "$TOOLS_DIR/src/PatchClassVersion52.java" \
   "$TOOLS_DIR/src/PatchDisplayForceWindowed.java" \
+  "$TOOLS_DIR/src/PatchMacOSXDisplaySafeResizable.java" \
   "$TOOLS_DIR/src/PatchDisplayStartupSettings.java" \
   "$TOOLS_DIR/src/PatchMusicVolumeSettingHook.java" \
   "$TOOLS_DIR/src/PatchLWJGLArmSupport.java" \
@@ -439,6 +440,7 @@ extract_class "org/lwjgl/E_681"
 extract_class "org/lwjgl/Sys"
 extract_class "org/lwjgl/input/K_701"
 extract_class "org/lwjgl/opengl/Display"
+extract_class "org/lwjgl/opengl/MacOSXDisplay"
 extract_class "FE_76"
 extract_class "JB_129"
 extract_class "zy_1113"
@@ -448,6 +450,7 @@ patch_class PatchLWJGLArmSupport "org/lwjgl/E_681"
 patch_class PatchLWJGLArmSupport "org/lwjgl/Sys"
 patch_class PatchLWJGLArmSupport "org/lwjgl/input/K_701"
 patch_class PatchDisplayForceWindowed "org/lwjgl/opengl/Display"
+patch_class PatchMacOSXDisplaySafeResizable "org/lwjgl/opengl/MacOSXDisplay"
 patch_class PatchDisplayStartupSettings "FE_76"
 patch_class PatchMusicVolumeSettingHook "JB_129"
 patch_class PatchClassVersion52 "zy_1113"
@@ -507,10 +510,25 @@ if [ -z "$JAVA_BIN" ]; then
 fi
 
 cd "$GAME_DIR"
-exec "$JAVA_BIN" \
+JAVA_ARGS=()
+if [ -f "$GAME_DIR/settings/disable-window-resize.txt" ] && [ "$(head -n 1 "$GAME_DIR/settings/disable-window-resize.txt" | tr -d '[:space:]')" = "1" ]; then
+  JAVA_ARGS+=("-Dc2.disableWindowResize=true")
+fi
+
+set +e
+"$JAVA_BIN" "${JAVA_ARGS[@]}" \
   -Dapple.awt.application.name="Cultris II" \
   -Djava.library.path="$GAME_DIR/resources/libs-arm64" \
   -jar "$GAME_DIR/cultris2.jar"
+status=$?
+set -e
+if [ "$status" -ne 0 ]; then
+  echo
+  echo "Cultris II exited unexpectedly."
+  echo "If it crashed while opening, resizing, or entering fullscreen, open C2 Settings.command"
+  echo "and turn on Display -> Disable window resizing, then start the game again."
+fi
+exit "$status"
 EOF
 
 cat > "$NEW_GAME_DIR/launchers/macOS-c2settings.command" <<'EOF'
