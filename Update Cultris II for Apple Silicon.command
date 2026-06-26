@@ -510,31 +510,19 @@ if [ -z "$JAVA_BIN" ]; then
 fi
 
 cd "$GAME_DIR"
-RESIZE_SETTING="1"
-if [ -f "$GAME_DIR/settings/disable-window-resize.txt" ]; then
-  RESIZE_SETTING="$(head -n 1 "$GAME_DIR/settings/disable-window-resize.txt" | tr -d '[:space:]')"
-fi
 
 set +e
-if [ "$RESIZE_SETTING" != "0" ]; then
-  "$JAVA_BIN" \
-    -Dc2.disableWindowResize=true \
-    -Dapple.awt.application.name="Cultris II" \
-    -Djava.library.path="$GAME_DIR/resources/libs-arm64" \
-    -jar "$GAME_DIR/cultris2.jar"
-else
-  "$JAVA_BIN" \
-    -Dapple.awt.application.name="Cultris II" \
-    -Djava.library.path="$GAME_DIR/resources/libs-arm64" \
-    -jar "$GAME_DIR/cultris2.jar"
-fi
+"$JAVA_BIN" \
+  -Dc2.disableWindowResize=true \
+  -Dapple.awt.application.name="Cultris II" \
+  -Djava.library.path="$GAME_DIR/resources/libs-arm64" \
+  -jar "$GAME_DIR/cultris2.jar"
 status=$?
 set -e
 if [ "$status" -ne 0 ]; then
   echo
   echo "Cultris II exited unexpectedly."
-  echo "If it crashed while opening, resizing, or entering fullscreen, open C2 Settings.command"
-  echo "and turn on Display -> Disable window resizing, then start the game again."
+  echo "Open C2 Settings.command to choose a fixed 16:9 startup window size, then start the game again."
 fi
 exit "$status"
 EOF

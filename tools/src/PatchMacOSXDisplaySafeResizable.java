@@ -13,29 +13,57 @@ public class PatchMacOSXDisplaySafeResizable {
         Path in = Paths.get(args[0]);
         Path out = Paths.get(args[1]);
         ClassReader cr = new ClassReader(Files.readAllBytes(in));
-        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_MAXS);
+        ClassWriter cw = new ClassWriter(cr, ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS) {
+            @Override
+            protected String getCommonSuperClass(String type1, String type2) {
+                return "java/lang/Object";
+            }
+        };
         ClassVisitor cv = new ClassVisitor(Opcodes.ASM9, cw) {
             @Override
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
                 if (name.equals("method4708") && desc.equals("(Lorg/lwjgl/opengl/C_724;Lorg/lwjgl/opengl/DisplayMode;Ljava/awt/Canvas;II)V")) {
                     MethodVisitor mv = super.visitMethod(access, name, desc, signature, exceptions);
                     return new MethodVisitor(Opcodes.ASM9, mv) {
+                        private boolean skippingOldPropertyCheck;
+
+                        @Override
+                        public void visitLdcInsn(Object value) {
+                            if ("c2.disableWindowResize".equals(value)) {
+                                super.visitInsn(Opcodes.ICONST_0);
+                                skippingOldPropertyCheck = true;
+                                return;
+                            }
+                            super.visitLdcInsn(value);
+                        }
+
                         @Override
                         public void visitVarInsn(int opcode, int var) {
+                            if (skippingOldPropertyCheck) {
+                                if (opcode == Opcodes.ILOAD && var == 8) {
+                                    skippingOldPropertyCheck = false;
+                                    super.visitVarInsn(opcode, var);
+                                }
+                                return;
+                            }
                             if (opcode == Opcodes.ILOAD && var == 7) {
-                                Label enabled = new Label();
-                                Label done = new Label();
-                                super.visitLdcInsn("c2.disableWindowResize");
-                                super.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Boolean", "getBoolean", "(Ljava/lang/String;)Z", false);
-                                super.visitJumpInsn(Opcodes.IFEQ, enabled);
                                 super.visitInsn(Opcodes.ICONST_0);
-                                super.visitJumpInsn(Opcodes.GOTO, done);
-                                super.visitLabel(enabled);
-                                super.visitInsn(Opcodes.ICONST_1);
-                                super.visitLabel(done);
                                 return;
                             }
                             super.visitVarInsn(opcode, var);
+                        }
+
+                        @Override public void visitInsn(int opcode) {
+                            if (!skippingOldPropertyCheck) super.visitInsn(opcode);
+                        }
+                        @Override public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+                            if (!skippingOldPropertyCheck) super.visitMethodInsn(opcode, owner, name, desc, itf);
+                        }
+                        @Override public void visitJumpInsn(int opcode, Label label) {
+                            if (!skippingOldPropertyCheck) super.visitJumpInsn(opcode, label);
+                        }
+                        @Override public void visitLabel(Label label) {
+                            if (!skippingOldPropertyCheck) super.visitLabel(label);
                         }
                     };
                 }
@@ -50,7 +78,7 @@ public class PatchMacOSXDisplaySafeResizable {
                 return super.visitMethod(access, name, desc, signature, exceptions);
             }
         };
-        cr.accept(cv, 0);
+        cr.accept(cv, ClassReader.EXPAND_FRAMES);
         Files.createDirectories(out.getParent());
         Files.write(out, cw.toByteArray());
     }

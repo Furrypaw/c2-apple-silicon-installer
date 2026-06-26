@@ -55,7 +55,7 @@ Use `C2 Settings.command` to change common options without editing text files.
 
 ## Resize Warning
 
-Window resizing and fullscreen are experimental on Apple Silicon and are disabled by default for stability. Cultris II uses old LWJGL 2 OpenGL code, and macOS now runs OpenGL through Apple's Metal-backed compatibility layer. To try resize/fullscreen, open `C2 Settings.command`, turn **Display -> Disable window resizing** off, then restart the game. If the game crashes while opening, resizing, or entering fullscreen, turn that setting back on.
+Live window resizing is disabled on Apple Silicon for stability. Cultris II uses old LWJGL 2 OpenGL code, and macOS now runs OpenGL through Apple's Metal-backed compatibility layer; the LWJGL 2 resize path can crash the client. To change size, open `C2 Settings.command`, enter a fixed 16:9 startup window size, save, and restart the game.
 
 ## Where the Game Comes From
 

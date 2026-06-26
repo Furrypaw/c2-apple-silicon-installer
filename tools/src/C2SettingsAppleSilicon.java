@@ -60,7 +60,7 @@ class c2settings {
         "Godlike"
     };
     // ----------------------------------------------------------------------------
-    private JToggleButton tbAnim, tbBlur, tbFullscreen, tbDisableResize, tbMusic, tbEnemySound, tbComboHelper, tbExplicitTimer;
+    private JToggleButton tbAnim, tbBlur, tbFullscreen, tbMusic, tbEnemySound, tbComboHelper, tbExplicitTimer;
     private JToggleButton tbConsoleGeneral, tbConsoleChat;
     private JToggleButton tbReplayOn;
     private JToggleButton[] tbSounds;
@@ -133,8 +133,6 @@ class c2settings {
 
         p.add(sectionHeader("Window"));
         tbFullscreen = addToggleRow(p, "Fullscreen", "Start Cultris II in fullscreen");
-        tbDisableResize = addTallToggleRow(p, "Disable window resizing",
-            "<html>Safer default. Turn OFF only if you want experimental resize / fullscreen.<br>Changes apply after restarting Cultris II.</html>");
         addWindowSizeRow(p);
 
         p.add(sectionHeader("Rendering"));
@@ -260,7 +258,6 @@ class c2settings {
     private void loadAll() {
         // Display
         setToggle(tbFullscreen, readBool(F_DISPLAY_FULLSCREEN, false));
-        setToggle(tbDisableResize, readBool(F_DISABLE_WINDOW_RESIZE, true));
         setWindowWidth(readInt(F_DISPLAY_WINDOW_SIZE, 0));
         setToggle(tbAnim, readBool(F_ANIM_TOGGLE, false));
         setToggle(tbBlur, readBool(F_BLUR_TOGGLE, false));
@@ -326,7 +323,7 @@ class c2settings {
             writeFile(F_FPS,          spFps.getValue().toString());
             writeFile(F_HZ,           spHz.getValue().toString());
             writeFile(F_DISPLAY_FULLSCREEN, tbFullscreen.isSelected() ? "1" : "0");
-            writeFile(F_DISABLE_WINDOW_RESIZE, tbDisableResize.isSelected() ? "1" : "0");
+            writeFile(F_DISABLE_WINDOW_RESIZE, "1");
             writeFile(F_DISPLAY_WINDOW_SIZE, Integer.toString(windowWidthValue()));
             writeFile(F_BACKGROUND_COLOR,
                 spBgRed.getValue() + ", " + spBgGreen.getValue() + ", " + spBgBlue.getValue());
