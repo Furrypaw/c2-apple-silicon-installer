@@ -240,7 +240,10 @@ extract_class "org/lwjgl/E_681"
 extract_class "org/lwjgl/Sys"
 extract_class "org/lwjgl/input/K_701"
 extract_class "org/lwjgl/opengl/Display"
-extract_class "org/lwjgl/opengl/MacOSXDisplay"
+
+# extract_class "org/lwjgl/opengl/MacOSXDisplay"
+cp "$PATCHED_CLASSES/org/lwjgl/opengl/MacOSXDisplay.class" "$WORK_DIR/original-classes/org/lwjgl/opengl/MacOSXDisplay.class"
+
 extract_class "FE_76"
 extract_class "JB_129"
 extract_class "zy_1113"
